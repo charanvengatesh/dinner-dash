@@ -8,12 +8,15 @@ public class Maze {
 
   private int x;
   private int y;
+  private int endx;
+  private int endy;
 
   public Maze(int width, int height) {
     this.x = width;
     this.y = height;
     this.maze = new int[this.y][this.x];
-
+    this.endx = width - 1;
+    this.endy = height - 1;
   }
 
   public void generateMaze() {
@@ -27,51 +30,59 @@ public class Maze {
       }
     }
     maze[0][0] = 2;
-    maze[this.y-1][this.x-1] = 3;
+    Random rand = new Random();
+    for (int i = 0; i < this.x * this.y; i++) {
+      int tempY = rand.nextInt(this.y);
+      int tempX = rand.nextInt(this.x);
+      if (maze[tempY][tempX] == 1) {
+        this.endx = tempX;
+        this.endy = tempY;
+        break;
+      }
+    }
   }
 
-  public char[][] getMaze() {
-    char[][] charMaze = new char[this.y][this.x];
-    for (int i = 0; i < charMaze.length; i++) {
-      for (int j = 0; j < charMaze[i].length; j++) {
+  public int[][] getMaze() {
+    for (int i = 0; i < maze.length; i++) {
+      for (int j = 0; j < maze[i].length; j++) {
         if (maze[i][j] == 0) {
-          charMaze[i][j] = 'B';
+          maze[i][j] = 100;
         } else if (maze[i][j] == 1) {
-          charMaze[i][j] = 'O';
-        } else if (maze[i][j] == 2) {
-          charMaze[i][j] = 'S';
-        } else if (maze[i][j] == 3) {
-          charMaze[i][j] = 'E';
+          maze[i][j] = 0;
         }
       }
     }
-    return charMaze;
+    return maze;
   }
 
-  public void printMaze() {
+  public void printMaze(Player player) {
     for (int i = 0; i < this.x + 2; i++) {
-      System.out.print("X ");
+      System.out.print("\u001b[40m  \u001b[0m");
     }
     System.out.println();
     for (int i = 0; i < this.y; i++) {
-      System.out.print("X ");
+      System.out.print("\u001b[40m  \u001b[0m");
+
       for (int j = 0; j < this.x; j++) {
-        if (maze[i][j] == 0) {
-          System.out.print("X");
-        } else if (maze[i][j] == 1) {
-          System.out.print(" ");
+        if (maze[i][j] == 100) {
+          System.out.print("\u001b[40m  \u001b[0m");
+
+        } else if (i == this.getEndy() && j == this.getEndx()) {
+          System.out.print("\u001b[41m  \u001b[0m");
         } else if (maze[i][j] == 2) {
-          System.out.print("S");
-        } else{
-          System.out.print("E");
+          System.out.print("\u001b[42m  \u001b[0m");
+        } else if (maze[i][j] == 0) {
+          System.out.print("  ");
         }
-        System.out.print(" ");
       }
-      System.out.println("X");
+      System.out.println("\u001b[40m  \u001b[0m");
+
     }
     for (int i = 0; i < this.x + 2; i++) {
-      System.out.print("X ");
+      System.out.print("\u001b[40m  \u001b[0m");
+
     }
+    System.out.println();
   }
 
   private boolean validNextPoint(Point point) {
@@ -116,5 +127,13 @@ public class Maze {
 
   private Boolean pointNotPoint(Point point, int x, int y) {
     return !(x == point.x && y == point.y);
+  }
+
+  public int getEndx() {
+    return endx;
+  }
+
+  public int getEndy() {
+    return endy;
   }
 }

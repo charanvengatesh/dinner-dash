@@ -1,124 +1,120 @@
-import java.util.Arrays;
+
+import java.util.*;
 
 public class Solver {
+  private final List<Node> open;
+  private final List<Node> closed;
+  private final List<Node> path;
+  private final int[][] maze;
+  private Node now;
+  private final int xstart;
+  private final int ystart;
+  private int xend, yend;
+  private final boolean diag;
 
-  private char[][] maze;
-  private String currPath;
-  private int currX;
-  private int currY;
-  private boolean unsolvable;
+  
 
-
-  // constructor
-  Solver(char[][] aMaze, int stX, int stY, String currentPath, boolean noSolution) {
-    maze = aMaze;
-    currX = stX;
-    currY = stY;
-    currPath = currentPath;
-    unsolvable = noSolution;
+  public Solver(final int[][] maze, final int xstart, final int ystart, final boolean diag) {
+    this.open = new ArrayList<Node>();
+    this.closed = new ArrayList<Node>();
+    this.path = new ArrayList<Node>();
+    this.maze = maze;
+    this.now = new Node(null, xstart, ystart, 0, 0);
+    this.xstart = xstart;
+    this.ystart = ystart;
+    this.diag = diag;
   }
 
-  // indicate taken path
-  void placePlus() {
-    maze[currX][currY] = '+';
-  }
-
-  // for backtracking
-  void placeMinus() {
-    maze[currX][currY] = '-';
-  }
-
-  // solve
-  // priority in this order East, West, South, North
-  void solveMaze() {
-    // check for a win
-    if (checkForWin()) {
-      return;
+  public List<Node> findPathTo(final int xend, final int yend) {
+    this.xend = xend;
+    this.yend = yend;
+    this.closed.add(this.now);
+    addNeigborsToOpenList();
+    while (this.now.x != this.xend || this.now.y != this.yend) {
+      if (this.open.isEmpty()) { 
+        return null;
+      }
+      this.now = this.open.get(0); 
+      this.open.remove(0);
+      this.closed.add(this.now);
+      addNeigborsToOpenList();
     }
-    // No win, so let's check for an opening
-    // check east
-    if (currY + 1 < maze[currX].length && checkForOpen(currX, currY + 1)) {
-      currY++;
-      placePlus();
-      currPath += "E"; // Append East to our current path
-      // recursive call continue searching
-      solveMaze();
-      // check west
-    } else if (currY - 1 >= 0 && checkForOpen(currX, currY - 1)) {
-      currY--;
-      placePlus();
-      currPath += "W";
-      solveMaze();
-      // check south
-    } else if (currX + 1 < maze.length && checkForOpen(currX + 1, currY)) {
-      currX++;
-      placePlus();
-      currPath += "S";
-      solveMaze();
-      // check north
-    } else if (currX - 1 >= 0 && checkForOpen(currX - 1, currY)) {
-      currX--;
-      placePlus();
-      currPath += "N";
-      solveMaze();
-    } else { // we've hit a dead end, we need to backtrack
-      if (currPath.length() == 0) {
-        // we're back at the starting point, the maze is unsolvable
-        unsolvable = true;
-        return;
-      } else {
-        // we've reached a dead end, lets backtrack
-        placeMinus();
-        backTrack();
+    this.path.add(0, this.now);
+    while (this.now.x != this.xstart || this.now.y != this.ystart) {
+      this.now = this.now.parent;
+      this.path.add(0, this.now);
+    }
+    return this.path;
+  }
+
+  public void printMaze(final int[][] data){
+    if (path != null) {
+      path.forEach((n) -> {
+        data[n.y][n.x] = -1;
+      });
+      System.out.printf("\nTotal Moves: %.00f\n", path.get(path.size() - 1).g);
+
+      for (int i = 0; i < data[0].length + 2; i++) {
+        System.out.print("\u001b[40m  \u001b[0m");
+      }
+      System.out.println();
+      for (final int[] maze_row : data) {
+        System.out.print("\u001b[40m  \u001b[0m");
+        for (final int maze_entry : maze_row) {
+          switch (maze_entry) {
+            case 0:
+              System.out.print("  ");
+              break;
+            case -1:
+              System.out.print("\u001b[43m  \u001b[0m");
+              break;
+            default:
+              System.out.print("\u001b[40m  \u001b[0m");
+          }
+        }
+        System.out.print("\u001b[40m  \u001b[0m");
+        System.out.println();
+
+      }
+      for (int i = 0; i < data[0].length + 2; i++) {
+        System.out.print("\u001b[40m  \u001b[0m");
+      }
+      System.out.println();
+    }
+  }
+
+  private static boolean findNeighborInList(final List<Node> array, final Node node) {
+    return array.stream().anyMatch((n) -> (n.x == node.x && n.y == node.y));
+  }
+
+  private double distance(final int dx, final int dy) {
+    if (this.diag) { 
+      return Math.hypot(this.now.x + dx - this.xend, this.now.y + dy - this.yend);
+    } else {
+      return Math.abs(this.now.x + dx - this.xend) + Math.abs(this.now.y + dy - this.yend);
+    }
+  }
+
+  private void addNeigborsToOpenList() {
+    Node node;
+    for (int x = -1; x <= 1; x++) {
+      for (int y = -1; y <= 1; y++) {
+        if (!this.diag && x != 0 && y != 0) {
+          continue; 
+        }
+        node = new Node(this.now, this.now.x + x, this.now.y + y, this.now.g, this.distance(x, y));
+        if ((x != 0 || y != 0)
+            && this.now.x + x >= 0 && this.now.x + x < this.maze[0].length
+            && this.now.y + y >= 0 && this.now.y + y < this.maze.length
+            && this.maze[this.now.y + y][this.now.x + x] != -1 
+            && !findNeighborInList(this.open, node) && !findNeighborInList(this.closed, node)) { 
+          node.g = node.parent.g + 1.;
+          node.g += maze[this.now.y + y][this.now.x + x]; 
+
+          this.open.add(node);
+        }
       }
     }
+    Collections.sort(this.open);
   }
-
-  // see if the spot at a give x, y is open
-  boolean checkForOpen(int x, int y) {
-    return maze[x][y] == 'O';
-  }
-
-  // see if any of the surrounding spots are the exit
-  boolean checkForWin() {
-    // make sure to protect against out of bounds as well
-    return ((currY + 1 < maze[currX].length && maze[currX][currY + 1] == 'X')
-        || (currY - 1 >= 0 && maze[currX][currY - 1] == 'X')
-        || (currX + 1 < maze[currX].length && maze[currX + 1][currY] == 'X')
-        || (currX - 1 >= 0 && maze[currX - 1][currY] == 'X'));
-  }
-
-  void backTrack() {
-    // sanity chek currPath.length() should always be > 0 when we call backTrack
-    if (currPath.length() > 0) {
-      placeMinus();
-      switch (currPath.charAt(currPath.length() - 1)) {
-        case 'E':
-          currY--;
-          break;
-        case 'W':
-          currY++;
-          break;
-        case 'S':
-          currX--;
-          break;
-        case 'N':
-          currX++;
-          break;
-      }
-      currPath = currPath.substring(0, currPath.length() - 1);
-      solveMaze();
-    }
-  }
-
-  void printMaze() {
-    for (int i = 0; i < maze.length; i++) {
-      System.out.println(Arrays.toString(maze[i]));
-    }
-  }
-
-  public String getPath(){
-    return currPath;
-  }
-
 }
